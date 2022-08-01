@@ -20,15 +20,14 @@ b) something I am overlooing in how I have adjusted the c++ DWG model of a strin
 
 **Instructions:**
 ## octave code
-open octave
-on octave command line, enter "run estimateGdb.m" 
-to suppress line fit plots set variable doplot = 0 on line 122
+open octave<br/>
+on octave command line, enter "run estimateGdb.m" <br/>
+to suppress line fit plots set variable doplot = 0 on line 122<br/>
 
 ## c code
-download STK
-download JOS overlay (see https://ccrma.stanford.edu/~jos/pasp05/Customizing_STK_Development.html)
-navigate to folder myproj
-replace original gtrc folder with gtrc folder from this repository
-on command line enter "make test"
-
+download STK<br/>
+download JOS overlay (see https://ccrma.stanford.edu/~jos/pasp05/Customizing_STK_Development.html) <br/>
+navigate to folder myproj <br/>
+replace original gtrc folder with gtrc folder from this repository <br/>
+on command line enter "make test" <br/>
 
