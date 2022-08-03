@@ -25,9 +25,6 @@ on octave command line, enter "run estimateGdb.m" <br/>
 to suppress line fit plots set variable doplot = 0 on line 122<br/>
 
 ## c code
-download STK<br/>
-download JOS overlay (see https://ccrma.stanford.edu/~jos/pasp05/Customizing_STK_Development.html) <br/>
-navigate to folder myproj <br/>
-replace original gtrc folder with gtrc folder from this repository <br/>
+navigate to folder projects/gtrc <br/>
 on command line enter "make test" <br/>
 
