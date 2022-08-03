@@ -1,0 +1,82 @@
+# STK project Makefile for Unix systems which have GNU Makefile utilities.
+# ALSA sound drivers are assumed.
+# Set the MAIN variable to the main program name, and OFILES to a list
+# of secondary C++ files before including this Makefile.  The variable
+# ARGS can be used to specify MAIN program arguments for the 'test' 
+# make target (the default).  For example:
+#
+# MAIN = prog
+# ARGS = param1 param2
+# OFILES = sub1.o sub2.o
+# 
+
+# You might have to modify the following path if you move things
+# around on your system.  The following definition corresponds
+# to an STK project directory that is a subdirectory of the core
+# STK distribution.
+STK_PATH = ../../src/
+STK_LIB = $(STK_PATH)libstk.a
+INCLUDE = ../../include/
+RM = /bin/rm 
+# sndplay is part of the snd-utils package installed as part of Planet CCRMA.
+# It works whether the jack audio server is running or not:
+#SNDPLAY = sndplay
+SNDPLAY = play
+CFILES = $(OFILES:.o=.c)
+#For speed:
+#CFLAGS = -O3
+#For debugging:
+CFLAGS = -g -O0
+CFLAGS += -Wall -I$(INCLUDE)
+
+# The following "C flags" may need to be modified if you are not 
+# working on a CCRMA machine:
+CC = g++ $(CFLAGS) $(DEFS) -D__LITTLE_ENDIAN__ -D__LINUX_ALSA__  
+# Intel processors, such as the Pentium, are "little endian".
+# The PowerPC (used in Macs) is "big endian".
+# The machines at CCRMA run Fedora Core 4, which includes ALSA sound support.
+# They all have Intel processors.
+
+# If you want to use the jack audio server, REPLACE the ALSA above with
+# -D__LINUX_JACK__
+# Also, replace "-lasound" below with "-ljack"
+# If something doesn't work, type "configure --with-jack" in the 
+# top-level STK directory (..), and study ../projects/examples/Makefile
+# for differences.
+
+LIBRARY = -lpthread -lm -lasound
+
+# DEFAULT MAKE TARGET: 
+all: $(MAIN)
+
+# TYPICAL MAKE TARGETS:
+
+test: $(MAIN)
+	./$(MAIN) $(ARGS)
+	$(SNDPLAY) $(MAIN).wav
+
+clean : 
+	-rm $(MAIN) $(MAIN).wav *.o *~ TAGS $(OFILES)
+
+cleanIns distclean: 
+	rm $(MAIN)
+
+strip : 
+	strip $(MAIN)
+
+$(MAIN): $(MAIN).cpp $(STK_LIB) $(OFILES)
+	$(CC) $(MAIN).cpp $(OFILES) $(STK_LIB) $(LIBRARY) -o $(MAIN)
+
+tags: $(NAME)
+	etags --c++ $(MAIN).cpp $(CFILES) $(STK_PATH)*.cpp $(INCLUDE)*.h
+
+.SUFFIXES: .cpp .o
+
+.cpp.o: $*.h
+	$(CC) -c $*.cpp
+
+%.o : $(STK_PATH)%.cpp
+	$(CC) -c $(<) -o $@
+
+$(STK_LIB): $(STK_PATH)*.cpp
+	(cd $(STK_PATH); make)

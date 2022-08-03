@@ -212,6 +212,8 @@ F_whole = [F_smooth F_smooth(end)+F_smooth];
 gdb_mp = mps(gdb_whole);
 figure;
 plot(F_whole,gdb_whole,F_whole,gdb_mp);legend("gdb","gdb mp"); grid minor on;
+ylabel("magnitude response (dB)");
+xlabel("frequency (Hz)");
 set(gcf, 'Position', get(0, 'Screensize'));
 
 
@@ -246,6 +248,8 @@ hold on;
 plot(F_smooth,gdb_smooth); %original gdb interpolated
 plot(F_peaks,gdb_peaks,'r*');
 grid minor on;
+ylabel("magnitude response (dB)");
+xlabel("frequency (Hz)");
 legend("-abs(Hfilter)","gdb_{smooth}","gdb_{peaks}","location","southwest");
 
 
