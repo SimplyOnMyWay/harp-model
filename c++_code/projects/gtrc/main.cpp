@@ -30,10 +30,10 @@ int main(int argc,char *argv[])
                      0.75 /* pluck position (0:1) */
                      );
 
-  output.tick(simpString->tick(1.0)); /* impulse */
+  output.tick(simpString->tick(2.0)); /* impulse */
 
 
-  for (i=1;i<srate*3;i++)   {
+  for (i=1;i<srate*10;i++)   {
     output.tick(simpString->tick(0.0));
   }
 

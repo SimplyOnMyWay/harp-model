@@ -276,8 +276,8 @@ Smp = 10 .^ (Cf/20); % minimum-phase spectrum
 Smpp = Smp(1:Ns); % nonnegative-frequency portion
 wt = 1 ./ (fk+1); % typical weight fn for audio
 wk = 2*pi*fk/fs;
-NZ = 25;
-NP = 25;
+NZ = 20;
+NP = 20;
 [Bi,Ai] = invfreqz(Smpp,wk,NZ,NP,wt);
 Hh = freqz(Bi,Ai,Ns);
 
@@ -298,6 +298,29 @@ xlabel('Frequency (Hz)');
 ylabel('Magnitude (dB)');
 title('Magnitude Frequency Response');
 legend('Desired','Filter','Measured');
+
+## figure;                         
+## freqz(Bi,Ai);
+
+[H,w] = freqz(Bi,Ai);
+figure;
+set(gcf, 'Position', get(0, 'Screensize'));
+subplot(211);
+plot(fk,abs(Smpp)); hold on;
+plot(w./pi.*fk(end),abs(H));
+ylabel("Magnitude response (-)");
+grid minor on;
+title("Comparison of desired (minimum phase) frequency response, with filter frequency response");
+legend("desired","filter","location","SouthWest");
+subplot(212);
+plot(fk,rad2deg(angle(Smpp))); hold on;
+plot(w./pi.*fk(end),rad2deg(angle(H)));
+ylabel("phase response (Hz)");
+xlabel("frequency (Hz)");
+grid minor on;
+legend("desired","filter","location","SouthWest");
+
+
 
 
 % %%%%%%%%%%%%%%%%%%%%%%%5%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -14,7 +14,7 @@ SimpString :: SimpString(StkFloat lowestFreq)
   length = (long) (SRATE / lowestFreq + 1);
   lastLength = length;
   lastFreq = lowestFreq;
-  loopGain = (StkFloat) 0.999;
+  loopGain = (StkFloat) 1.0;
   delayLine = new DelayA(length,length);
   combDelay = new Delay(length,length);
   pluckAmp = (StkFloat) 0.2;
@@ -25,12 +25,12 @@ SimpString :: SimpString(StkFloat lowestFreq)
 
   // MOC 01.08.2022
   // a and b coeffs copied from outputs of Octave/Matlab file estimateGdb.m 
-  StkFloat aCoeffs[26] = {1,1.0121,-0.0033335,0.020044,0.065425,0.010869,0.27115,0.36892,0.099736,-0.31453,-0.09778,0.55836,0.35303,0.1377,0.11322,0.10453,0.28679,0.26397,0.12531,0.035282,-0.12458,0.069552,0.2519,0.20875,0.23293,0.07192};
+  StkFloat aCoeffs[26] = {1,0.84957,-0.23412,-0.086182,0.15575,0.14016,0.29239,0.30141,-0.083032,-0.40584,-0.021339,0.58943,0.24425,-0.045438,-0.0074434,0.079901,0.23753,0.24937,0.1673,-0.021739,-0.19302,0.04546,0.20634,0.10795,0.11098,0.0023504};
   
   std::vector<StkFloat> a(aCoeffs, aCoeffs+26);
   loopFilter->setDenominator(a);
 
-  StkFloat bCoeffs[26] = {-0.41846,0.2904,0.25022,-0.37259,0.25113,0.15289,-0.27758,-0.00741,0.23392,-0.023239,-0.25541,0.014386,0.18875,-0.17571,-0.0048375,0.17101,-0.019006,-0.11101,0.0031186,0.24299,-0.069115,-0.2156,0.13133,-6.1139e-05,-0.1062,0.10544};
+  StkFloat bCoeffs[26] = {0.9113,0.86472,-0.13591,-0.11715,0.11981,0.16158,0.29417,0.28849,-0.048681,-0.37634,-0.067495,0.54502,0.28484,-0.021092,-0.028164,0.060289,0.2464,0.26189,0.14685,-0.0020269,-0.16457,0.016445,0.19475,0.12125,0.10997,0.0093465};
   
   std::vector<StkFloat> b(bCoeffs, bCoeffs+26);
   loopFilter->setNumerator(b);
@@ -60,7 +60,7 @@ void SimpString :: clear()
 
 void SimpString :: setFreq(StkFloat frequency)
 {
-  StkFloat loopFilterDelay = 0.5; /* just a guess */
+  StkFloat loopFilterDelay = -10; /* just a guess */
   lastFreq = frequency;
   lastLength = ((StkFloat) SRATE / lastFreq); /* length - delays */
   delayLine->setDelay(lastLength - loopFilterDelay);
