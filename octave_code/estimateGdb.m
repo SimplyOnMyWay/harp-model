@@ -155,9 +155,8 @@ end
 % prepare gdb to be in full "fft buffer format", ahead of converting to minimum phase
 % The gain at half the sampling-rate was set arbitrarily to -4.08 dB per
 % https://ccrma.stanford.edu/realsimple/phys_mod_overview/Loop_Filter_Estimation.html
-% Adjusted to -8 as some of my lower freq peaks were about -5db
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-gdb_peaks = [gdb(1) gdb(loc) -8.0]; 
+gdb_peaks = [gdb(loc(1)) gdb(loc) -4.0]; 
 F_peaks = [F(1) F(loc) F(end)];
 
 % figure;
@@ -169,7 +168,9 @@ F_peaks = [F(1) F(loc) F(end)];
 % smooth ahead of invfreq
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 lambda = 0.000001;
-F_smooth = linspace(0,F(end),2^10);
+## power of 2 plus 1 for the dc value, when neg freqs added later (ie not incl fs/2 or dc) total freq samples will be a power of 2
+Nsmooth = 2^9 + 1; 
+F_smooth = linspace(0,F(end),Nsmooth);
 gdb_smooth = regdatasmooth(F_peaks, gdb_peaks, "lambda", lambda, "xhat", F_smooth');
 
 ## figure;
@@ -195,8 +196,13 @@ gdb_smooth = regdatasmooth(F_peaks, gdb_peaks, "lambda", lambda, "xhat", F_smoot
 % convert gdb into whole spectrum "fft buffer format",
 % i.e., dc followed by positive freq vals, followed by neg freq vals, and power of 2 in length
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-gdb_whole = [gdb_smooth' flip(gdb_smooth')];
-F_whole = [F_smooth F_smooth(end)+F_smooth];
+## gdb_whole = [gdb_smooth' flip(gdb_smooth')];
+gdb_s = gdb_smooth';
+negfreqi = Nsmooth-1:-1:2;
+gdb_whole = [gdb_s gdb_s(negfreqi)];
+## add on neg frequencies, excl dc and fs/2
+F_whole = [F_smooth F_smooth(end) + F_smooth(2:end-1)];
+
 
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -209,13 +215,89 @@ F_whole = [F_smooth F_smooth(end)+F_smooth];
 % contribution of minimum-phase zeros to the complex cepstrum was described in:
 % https://ccrma.stanford.edu/~jos/filters/Poles_Zeros_Cepstrum.html#sec:cepstrum
 % %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+#{
 gdb_mp = mps(gdb_whole);
 figure;
-plot(F_whole,gdb_whole,F_whole,gdb_mp);legend("gdb","gdb mp"); grid minor on;
+subplot(2,1,1);
+plot(F_whole,gdb_whole,F_whole,-abs(gdb_mp));legend("gdb","gdb mp"); grid minor on;
 ylabel("magnitude response (dB)");
 xlabel("frequency (Hz)");
+subplot(2,1,2);
+plot(F_whole,angle(gdb_whole),F_whole,angle(gdb_mp));legend("gdb","gdb mp"); grid minor on;
+ylabel("phase response (degrees)");
+xlabel("frequency (Hz)");
 set(gcf, 'Position', get(0, 'Screensize'));
+#}
 
+
+## ####################
+## alternative mp code!
+## ####################
+fk = F_smooth;
+Nfft = 2^10;                     # 512
+Ns = Nsmooth; if Ns~=Nfft/2+1, error("confusion"); end
+gdb_s = gdb_smooth';
+Sdb = [gdb_s,gdb_s(Ns-1:-1:2)]; % install negative-frequencies
+
+S = 10 .^ (Sdb/20); % convert to linear magnitude
+s = ifft(S); % desired impulse response
+s = real(s); % any imaginary part is quantization noise
+tlerr = 100*norm(s(round(0.9*Ns:1.1*Ns)))/norm(s);
+disp(sprintf(['Time-limitedness check: Outer 20%% of impulse ' ...
+              'response is %0.2f %% of total rms'],tlerr));
+% = 0.02 percent
+if tlerr>1.0 % arbitrarily set 1% as the upper limit allowed
+  error('Increase Nfft and/or smooth Sdb');
+end
+
+
+## figure;
+## plot(s, '-k'); grid('on');   title('Impulse Response');
+## xlabel('Time (samples)');   ylabel('Amplitude');
+
+c = ifft(Sdb); % compute real cepstrum from log magnitude spectrum
+% Check aliasing of cepstrum (in theory there is always some):
+caliaserr = 100*norm(c(round(Ns*0.9:Ns*1.1)))/norm(c);
+disp(sprintf(['Cepstral time-aliasing check: Outer 20%% of ' ...
+    'cepstrum holds %0.2f %% of total rms'],caliaserr));
+% = 0.09 percent
+if caliaserr>1.0 % arbitrary limit
+  error('Increase Nfft and/or smooth Sdb to shorten cepstrum');
+end
+% Fold cepstrum to reflect non-min-phase zeros inside unit circle:
+% If complex:
+% cf = [c(1), c(2:Ns-1)+conj(c(Nfft:-1:Ns+1)), c(Ns), zeros(1,Nfft-Ns)];
+cf = [c(1), c(2:Ns-1)+c(Nfft:-1:Ns+1), c(Ns), zeros(1,Nfft-Ns)];
+Cf = fft(cf); % = dB_magnitude + j * minimum_phase
+Smp = 10 .^ (Cf/20); % minimum-phase spectrum
+
+Smpp = Smp(1:Ns); % nonnegative-frequency portion
+wt = 1 ./ (fk+1); % typical weight fn for audio
+wk = 2*pi*fk/fs;
+NZ = 25;
+NP = 25;
+[Bi,Ai] = invfreqz(Smpp,wk,NZ,NP,wt);
+Hh = freqz(Bi,Ai,Ns);
+
+## usage: dbval = mydb (val)
+##
+##
+function dbval = mydb (val)
+  dbval = 20*log10(val);
+endfunction
+
+figure;
+set(gcf, 'Position', get(0, 'Screensize'));
+plot(fk,mydb([Smpp(:),Hh(:)]));
+hold on;
+plot(F_peaks, gdb_peaks, "*m");
+grid minor on;
+xlabel('Frequency (Hz)');
+ylabel('Magnitude (dB)');
+title('Magnitude Frequency Response');
+legend('Desired','Filter','Measured');
 
 
 % %%%%%%%%%%%%%%%%%%%%%%%5%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -226,20 +308,50 @@ set(gcf, 'Position', get(0, 'Screensize'));
 
 % Note that Hmin corresponds to the response of the min-phase filter
 % that we want to fit to obtain filter parameters using invfreqz
+
+#{
 Hmin = gdb_mp;
 Npt = length(F_whole);
 wH = (0:((Npt/2)-1))*2*pi/Npt;
 wH(1) = wH(2);
 wt = 1./wH;
+#}
+
+
+#{ test...
+fk = F_whole(1:Nsmooth);
+wt = 1./ (fk+1);
+fs = F_smooth(2);
+wk = 2*pi*fk/fs;
+#}
+
+#{
 [Bi,Ai] = invfreqz(Hmin(1:Npt/2),wH,25,25,wt);
 figure;freqz(Bi,Ai);
 set(gcf, 'Position', get(0, 'Screensize'));
 title('freqz of filter obtained using invfreqz');
+#}
 
-
+                
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % freqz(Bi,Ai) looks off to me, and so plotting magn of fitted filter as a check
+
+#{                
+                
 [H,w] = freqz(Bi,Ai);
+figure;
+freqz_plot(w,H);
+set(gcf, 'Position', get(0, 'Screensize'));
+
+figure;
+subplot(211);
+plot(w./pi,real(H));
+set(gcf, 'Position', get(0, 'Screensize'));
+grid minor on;
+subplot(212);
+plot(w./pi,rad2deg(unwrap(angle(H))));
+grid minor on;
+
 figure;
 set(gcf, 'Position', get(0, 'Screensize'));
 wd = w*F(end)/3.14;
@@ -252,7 +364,7 @@ ylabel("magnitude response (dB)");
 xlabel("frequency (Hz)");
 legend("-abs(Hfilter)","gdb_{smooth}","gdb_{peaks}","location","southwest");
 
-
+#}
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % IF NEEDED FOR IMPLEMENTING THE LOOP FILTER...
