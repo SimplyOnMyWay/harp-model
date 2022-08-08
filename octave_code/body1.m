@@ -4,53 +4,13 @@ filename = "gtrbody.wav";
 [signal,fs] = audioread(filename);
 sound(signal);
 
-frameSizeMS = 100;
-minFrameLen = fs*frameSizeMS/1000; 
-frameLenPow = nextpow2(minFrameLen);
-frameLen = 2^frameLenPow; % frame length = fft size
-[B,F,T] = specgram(signal,frameLen,fs);
-
-BdB = 10*log10(abs(B));
-
-figure;
-set(gcf, 'Position', get(0, 'Screensize'));
-mesh(T,F/1000,BdB);
-view(130,30);
-title('Spectrogram');
-xlabel('Time (s)');ylabel('Frequency (kHz)');zlabel('Magnitude (dB)');
-axis tight;zoom on;
-
-
-
-## ## bark warping
-W = F./F(end);
-[WB,G] = lin2bark(W,fs);
-FB = WB.*F(end);
-
-iT = 2;
-
-figure;
-set(gcf, 'Position', get(0, 'Screensize'));
-subplot(211);
-plot(F,BdB(:,iT));
-grid minor on;
-subplot(212);
-plot(FB,BdB(:,iT));
-grid minor on;
-
-
-
-
-
-Nfft = 2^10;
+Nfft = 2^16;
 Sfull = fft(signal,Nfft);
 iposFreq = 1:Nfft/2+1;
 S = Sfull(iposFreq);
 SdB = 20*log10(abs(S));
-SdB10 = 10*log10(abs(S));
 offset = max(SdB);
 SdBNorm = SdB - offset;
-SdBNorm10 = SdB10 - max(SdB10);
 fk = linspace(0,fs,Nfft);
 fkk = fk(iposFreq);
 
@@ -59,13 +19,86 @@ WKK = fkk./fkk(end);
 [WKKB,GG] = lin2bark(WKK,fs);
 fkkB = WKKB.*fkk(end);
 
+df = fkk(2)-fkk(1);
+SdBNormi = interp1(fkkB,SdBNorm,fkk)';
+
+SdBi = SdBNormi+offset;
+Simag = 10.^(SdBi./20);
+pS = unwrap(angle(S));
+pSi = interp1(fkkB,pS,fkk)';
+Si = Simag.*(cos(pSi)+i*sin(pSi));
+Sfulli = [Si' flip(Si(2:end-1)')]';
+## Smag = 10.^(SdB./20);
+## Sr = Smag.*(cos(pS)+i*sin(pS));
+## Sfullr = [Sr' flip(Sr(2:end-1)')]';
+
+figure;
+set(gcf, 'Position', get(0, 'Screensize'));
+plot(fk,[Sfull,Sfulli]);
+legend("linear freq","Bark freq");
+
+# inverse fft the full (up to fs) "bark" warped FR
+signali = ifft(Sfulli);
+signalr = ifft(Sfull);
+
+# time axes...
+T = 1/fs;
+t = T:T:T*length(signal);
+figure;
+set(gcf, 'Position', get(0, 'Screensize'));
+plot(t,[signal,signalr(1:length(signalr)/8),signali(1:length(signalr)/8)]);
+grid minor on;
+legend("original","recovered","Bark warped!");
+
+xlimval = 400;
+df = fkk(2) - fkk(1);
+ixlim = find(abs(fkk - xlimval) < df/2);
 figure;
 set(gcf, 'Position', get(0, 'Screensize'));
 subplot(211);
-plot(fkk,[SdBNorm SdBNorm10]);
+plot(fkk,SdBNorm);
+## xlim([0,fkk(ixlim)]);
+ylim([-60,0]);
 grid minor on;
 subplot(212);
 plot(fkkB,SdBNorm);
+## xlim([0,fkkB(ixlim)]);
+ylim([-60,0]);
 grid minor on;
+
+
+
+
+
+
+
+
+## ## test inverse fft on SdB and S
+## signalinv1 = ifft(Sfull);
+
+## T = 1/fs;
+## t = T.*[1:length(signal)];
+## Tinv = t(end)/length(signalinv1);
+## tinv = 1/(fs*8):1/(fs*8):t(end);
+## figure;
+## plot(t,signal,tinv,signalinv1);
+
+## figure;
+## set(gcf, 'Position', get(0, 'Screensize'));
+## hax1 = subplot(211);
+## plot(t,signal);
+## grid minor on;
+## hax2 = subplot(212);
+## ii = 1:round(length(tinv)/8);
+## plot(tinv(ii),signalinv1(ii));
+## grid minor on;
+## linkaxes([hax1, hax2]);
+## xlim([0,0.1])
+
+
+## sound(signalinv1,fs)
+
+## sound(signal,fs)
+
 
 
