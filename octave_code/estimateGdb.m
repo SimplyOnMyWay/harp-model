@@ -50,24 +50,23 @@ for ii = 1:length(loc); % use harmonic indices in variables "loc", previously de
   %% line fit using polyfit, adjusting dBfit for various freq bands...
   band1 = floor(length(loc)*0.2); %first 25%
   band2 = floor(length(loc)*0.4); %first 20%
-  band3 = floor(length(loc)*0.56); %first 50% (above ca 10Hz, where the gain should start to drop dramatically)                
+  band3 = floor(length(loc)*0.66); %first 50% (above ca 10Hz, where the gain should start to drop dramatically)                
   
   if (ii <= band1) 
-    dBfit = 10; % fit line to this amount of decay in dB
+    dBfit = 30; % fit line to this amount of decay in dB
     startTimeMS = 100; % start line fitting after this offset in ms      
   elseif (ii > band1 && ii <= band2)   
-    dBfit = 5; % inital decay steeper in this bandb
+    dBfit = 20; % inital decay steeper in this bandb
     startTimeMS = 50; % start line fitting after this offset in ms      
-  elseif ((ii > band2) && (ii <= band3) && (ii != 28 && ii != 29))
-    dBfit = 3; % fit to  short steep decay in this band
-    startTimeMS = 50; % start line fitting after this offset in ms      
+  elseif ((ii > band2) && (ii <= band3))
+    dBfit = 10; % fit to  short steep decay in this band
+    startTimeMS = 10; % start line fitting after this offset in ms      
   elseif (ii > band3)
-    dBfit = 0.3; % fit to very short steep decay in this band
-    startTimeMS = 16; % start line fitting after this offset in ms
-
-  elseif (ii == 28 || ii == 29)
-    dBfit = 0.3; % fit to very short steep decay in this band
-    startTimeMS = 16; % start line fitting after this offset in ms  
+    dBfit = 1; % fit to very short steep decay in this band
+    startTimeMS = 10; % start line fitting after this offset in ms
+  ## elseif (ii == 1) # || ii == 29)
+  ##   dBfit = 50; % fit to very short steep decay in this band
+  ##   startTimeMS = 6000; % start line fitting after this offset in ms  
   endif;
 
 
@@ -118,7 +117,7 @@ end
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % plot fitted slopes 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-doplot = 0;  % set to zero to suppress RT line fit plots
+doplot = 1;  % set to zero to suppress RT line fit plots
 if (doplot)
   batchsize = 20;
   nobatches = floor(length(loc)/batchsize);
@@ -146,7 +145,7 @@ if (doplot)
       xlabel('Time(s)');ylabel('magnitude (dB)');
 % title(['harm=' num2str(ii(i)) '; freq=' num2str(F(loc(ii(i)))) '  t60 = ' num2str(RT(sp1_ix))]);
       title(['harm=' num2str(j) '; freq=' num2str(F(loc(j))) '  t60 = ' num2str(RT(sp1_ix))]);
-      ylim([-100,0]);
+      ylim([-200,0]);
     end
   end
 end
@@ -156,7 +155,7 @@ end
 % The gain at half the sampling-rate was set arbitrarily to -4.08 dB per
 % https://ccrma.stanford.edu/realsimple/phys_mod_overview/Loop_Filter_Estimation.html
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-gdb_peaks = [gdb(loc(1)) gdb(loc) -4.0]; 
+gdb_peaks = [gdb(loc(1)) gdb(loc) -4.0];
 F_peaks = [F(1) F(loc) F(end)];
 
 % figure;
@@ -276,8 +275,8 @@ Smp = 10 .^ (Cf/20); % minimum-phase spectrum
 Smpp = Smp(1:Ns); % nonnegative-frequency portion
 wt = 1 ./ (fk+1); % typical weight fn for audio
 wk = 2*pi*fk/fs;
-NZ = 20;
-NP = 20;
+NZ = 30;
+NP = 30;
 [Bi,Ai] = invfreqz(Smpp,wk,NZ,NP,wt);
 Hh = freqz(Bi,Ai,Ns);
 
@@ -411,7 +410,7 @@ for i = 1: length(sos);stable(i) = stabilitycheck(i,4:6);end
 ## ###############################################
 ## Ai and Bi in rows to copy over to c++ DWG model
 ## ###############################################
-disp(length(Ai));
+disp(length(Ai));       
 for i = 1:length(Ai); printf([',' num2str(Ai(i))]);end;
 disp('\n');
 for i = 1:length(Bi); printf([',' num2str(Bi(i))]);end;

@@ -33,7 +33,7 @@ int main(int argc,char *argv[])
   output.tick(simpString->tick(2.0)); /* impulse */
 
 
-  for (i=1;i<srate*10;i++)   {
+  for (i=1;i<srate*5;i++)   {
     output.tick(simpString->tick(0.0));
   }
 

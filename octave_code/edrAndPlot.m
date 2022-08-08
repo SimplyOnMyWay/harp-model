@@ -7,7 +7,7 @@
 % 
 
 fileName = "mcliag_G4_3.wav";
-minPlotDB = -80; % minimum value in DB to be plotted
+minPlotDB = -200; % minimum value in DB to be plotted
 frameSizeMS = 10; % minimum frame length, in ms
 overlap = 0.5; % fraction of frame overlapping
 windowType = 'hann'; % type of windowing used for each frame
@@ -26,7 +26,7 @@ frameLen = 2^frameLenPow; % frame length = fft size
 % eval(['frameWindow = ' windowType '(frameLen);']);
 [B,F,T] = specgram(signal,frameLen,fs);
 
-Bdb = 10*log10(abs(B));
+Bdb = 20*log10(abs(B));
 
 
 
@@ -49,23 +49,14 @@ Bdb = 10*log10(abs(B));
 
 [nBins, nFrames] = size(B);
 
-
 B_energy = B.*conj(B);
 B_EDR = zeros(nBins, nFrames);
 for i = 1:nBins
           B_EDR(i,:) = fliplr(cumsum(fliplr(B_energy(i,:))));
 end
 
-#{
-for i = 1:nBins
-B_EDRdb(i, nFrames) = B(i,nFrames)*B(i,nFrames);
-for j = nFrames:2
-B_EDRdb(i,j-1) = B(i,j-1)*B(i,j-1) + B_EDRdb(i,j);
-end;
-end;
-#}
-
-B_EDRdb = 10*log10(abs(B_EDR));
+## convert to dB
+B_EDRdb = 20*log10(abs(B_EDR));
 
 % normalize EDR to 0 dB and truncate the plot below a given dB threshold
 offset = max(max(B_EDRdb));
@@ -105,7 +96,7 @@ axis tight;zoom on;
 % calculate the min number of frequency samples between peaks - assumes peaks are not much less than f0 apart
 minPeakDistance = floor(f0/(F(2)-F(1)));
 % add 100 to B_EDRdbN so no neg values - not exact, so increase if error thrown "Data contains negative values..."
-[pks,loc,extra]=findpeaks(100+B_EDRdbN(:,1),"MinPeakDistance",minPeakDistance);
+[pks,loc,extra]=findpeaks(2*offset+B_EDRdbN(:,1),"MinPeakDistance",minPeakDistance);
 
 figure;
 set(gcf, 'Position', get(0, 'Screensize'));
