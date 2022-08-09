@@ -19,3 +19,4 @@ s3norm = s3./max(s3);
 sound(s3norm,fs2);
 ## sound(s1i,fs2);
 ## sound(s2i,fs1);
+audiowrite("G4body.wav", s3norm,fs2);
