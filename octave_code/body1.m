@@ -13,6 +13,29 @@ function [A,B] = invfilter (f,bw,r,fs)
   A = B .* (r .^ [0 : length(B)-1]);   % inverse filter denominator
 endfunction
 
+## usage: [B,A] = modes_invfreq (S,f,fc,bw,bwfactor)
+## S: Complex FR, non-negative freqs (0:fs/2)
+## f: frequency vector up to fs/2
+## fc: peak center frequency
+## bw: estimated bandwidth
+function [B,A] = modes_invfreq (S,f,fc,bw,bwfactor)
+  if nargin < 5
+  bwfactor = 2;  #seems to be optimal, 1 and 3 tested, not so good
+  endif
+  if nargin < 4
+    bw = 10;
+    endif
+  df = f(2)-f(1);
+  ibw = find(abs(f - (fc - bwfactor*bw)) < df/2) : ...
+         find(abs(f - (fc + bwfactor*bw)) < df/2);
+  wkk_ = f(ibw)'./f(end).*pi;
+  S_ = S(ibw);
+  [B,A] = invfreqz(S_,wkk_,2,2);              
+endfunction
+
+
+
+
 filename = "gtrbody.wav";
 [signal,fs] = audioread(filename);
 sound(signal);
@@ -197,8 +220,8 @@ figure;
 set(gcf, 'Position', get(0, 'Screensize'));
 itime = 1:length(res1)/divider;
 ## plot(t,[signali(itime), res1(itime), res2(itime)]);
-plot(t,[signali(itime), res3(itime)]);
-legend("warped original","mode1 removed","mode2 removed");
+plot(t,[signali(itime), res1(itime), res2(itime), res3(itime)]);
+legend("warped original","mode1 removed","mode2 removed","mode3 removed");
 
 
 
@@ -234,17 +257,36 @@ legend("warped original","mode1 removed","mode2 removed");
 
 
 
-
+## ###################################
 ## alternative approach using invfreqz
+## ###################################
 
-wt = zeros(length(fkk));
+[B1_,A1_] = modes_invfreq(Si,fkk,freq1,bw1,2);
+H1_ = freqz(B1_,A1_,fkk,fs)';
+H1_dB = 20*log10(abs(H1_));
+H1_dBNorm = H1_dB - offset; 
+H1_inv = freqz(A1_,B1_,fkk,fs)';
+H1_invdB = 20*log10(abs(H1_inv));
+H1_invdBNorm = H1_invdB - offset; 
+figure;
+set(gcf, 'Position', get(0, 'Screensize'));
+plot(fkk,[SdBNormi, H1_dBNorm,H1invdBNorm]);
+grid minor on;
 
+## culprit!!!! not so straight forward to invert the biquad filter it seems, hopefully a workaround is possible!
+res1_ = filter(A1_,B1_,signali(1:length(signal)));       % apply inverse filter
 
+Sfull1_ = fft(res1_,Nfft);
+S1_ = Sfull1_(iposFreq);
+S1_dB = 20*log10(abs(S1_));
+S1_dBNorm = S1_dB - offset;
 
+figure;
+set(gcf, 'Position', get(0, 'Screensize'));
+plot(fkk./1000,[SdBNormi,S1_dBNorm]);
+axis([0 1.4 -60 0]);
+grid on;
+title("Inverse filtering using invfreq!");
 
-## ## excitation buzness - chuck into separate file
-
-## n = 0.5.*(rand(length(signal),1)-0.5)*2;
-## sound(n);
 
 
