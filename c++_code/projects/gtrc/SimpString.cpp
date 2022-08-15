@@ -63,7 +63,7 @@ void SimpString :: clear()
 
 void SimpString :: setFreq(StkFloat frequency)
 {
-  StkFloat loopFilterDelay = -10.0; /* just a guess */
+  StkFloat loopFilterDelay = -0.0; /* just a guess */
   lastFreq = frequency;
   lastLength = ((StkFloat) SRATE / lastFreq); /* length - delays */
   delayLine->setDelay(lastLength - loopFilterDelay);

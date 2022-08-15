@@ -19,7 +19,6 @@ f0 = 370; % McLiag G4 is flat!!  Just G3 = 196Hz, G4 = 392Hz
 ## #################
 run edrAndPlot;
 
-
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % first estimate T60 - taken from estimateT60.m REAL SIMPLE LAB on Resonators
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -117,7 +116,7 @@ end
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % plot fitted slopes 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-doplot = 1;  % set to zero to suppress RT line fit plots
+doplot = 0;  % set to zero to suppress RT line fit plots
 if (doplot)
   batchsize = 20;
   nobatches = floor(length(loc)/batchsize);
@@ -319,92 +318,87 @@ xlabel("frequency (Hz)");
 grid minor on;
 legend("desired","filter","location","SouthWest");
 
+## % %%%%%%%%%%%%%%%%%%%%%%%5%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+## % Fit filter Bi(z)/Ai(z) to gdb_mp, using function invfreq
+## % code taken from:
+## % https://ccrma.stanford.edu/realsimple/vguitar/Fitting_Filters_Matlab.html
+## % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+## % Note that Hmin corresponds to the response of the min-phase filter
+## % that we want to fit to obtain filter parameters using invfreqz
+
+
+## Hmin = gdb_mp;
+## Npt = length(F_whole);
+## wH = (0:((Npt/2)-1))*2*pi/Npt;
+## wH(1) = wH(2);
+## wt = 1./wH;
 
 
 
-% %%%%%%%%%%%%%%%%%%%%%%%5%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Fit filter Bi(z)/Ai(z) to gdb_mp, using function invfreq
-% code taken from:
-% https://ccrma.stanford.edu/realsimple/vguitar/Fitting_Filters_Matlab.html
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Note that Hmin corresponds to the response of the min-phase filter
-% that we want to fit to obtain filter parameters using invfreqz
-
-#{
-Hmin = gdb_mp;
-Npt = length(F_whole);
-wH = (0:((Npt/2)-1))*2*pi/Npt;
-wH(1) = wH(2);
-wt = 1./wH;
-#}
+## fk = F_whole(1:Nsmooth);
+## wt = 1./ (fk+1);
+## fs = F_smooth(2);
+## wk = 2*pi*fk/fs;
 
 
-#{ test...
-fk = F_whole(1:Nsmooth);
-wt = 1./ (fk+1);
-fs = F_smooth(2);
-wk = 2*pi*fk/fs;
-#}
 
-#{
-[Bi,Ai] = invfreqz(Hmin(1:Npt/2),wH,25,25,wt);
-figure;freqz(Bi,Ai);
-set(gcf, 'Position', get(0, 'Screensize'));
-title('freqz of filter obtained using invfreqz');
-#}
+## [Bi,Ai] = invfreqz(Hmin(1:Npt/2),wH,25,25,wt);
+## figure;freqz(Bi,Ai);
+## set(gcf, 'Position', get(0, 'Screensize'));
+## title('freqz of filter obtained using invfreqz');
+
 
                 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% freqz(Bi,Ai) looks off to me, and so plotting magn of fitted filter as a check
+## % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+## % freqz(Bi,Ai) looks off to me, and so plotting magn of fitted filter as a check
 
-#{                
                 
-[H,w] = freqz(Bi,Ai);
-figure;
-freqz_plot(w,H);
-set(gcf, 'Position', get(0, 'Screensize'));
+## [H,w] = freqz(Bi,Ai);
+## figure;
+## freqz_plot(w,H);
+## set(gcf, 'Position', get(0, 'Screensize'));
 
-figure;
-subplot(211);
-plot(w./pi,real(H));
-set(gcf, 'Position', get(0, 'Screensize'));
-grid minor on;
-subplot(212);
-plot(w./pi,rad2deg(unwrap(angle(H))));
-grid minor on;
+## figure;
+## subplot(211);
+## plot(w./pi,real(H));
+## set(gcf, 'Position', get(0, 'Screensize'));
+## grid minor on;
+## subplot(212);
+## plot(w./pi,rad2deg(unwrap(angle(H))));
+## grid minor on;
 
-figure;
-set(gcf, 'Position', get(0, 'Screensize'));
-wd = w*F(end)/3.14;
-plot(wd, -abs(H),'linewidth',2);
-hold on; 
-plot(F_smooth,gdb_smooth); %original gdb interpolated
-plot(F_peaks,gdb_peaks,'r*');
-grid minor on;
-ylabel("magnitude response (dB)");
-xlabel("frequency (Hz)");
-legend("-abs(Hfilter)","gdb_{smooth}","gdb_{peaks}","location","southwest");
+## figure;
+## set(gcf, 'Position', get(0, 'Screensize'));
+## wd = w*F(end)/3.14;
+## plot(wd, -abs(H),'linewidth',2);
+## hold on; 
+## plot(F_smooth,gdb_smooth); %original gdb interpolated
+## plot(F_peaks,gdb_peaks,'r*');
+## grid minor on;
+## ylabel("magnitude response (dB)");
+## xlabel("frequency (Hz)");
+## legend("-abs(Hfilter)","gdb_{smooth}","gdb_{peaks}","location","southwest");
 
-#}
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % IF NEEDED FOR IMPLEMENTING THE LOOP FILTER...
 % direct form I to biquads in series...
 % see https://ccrma.stanford.edu/~jos/fp/Series_Second_Order_Sections.html
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-[sos,g] = tf2sos(Bi,Ai)
-% Check accuracy of biquad implementation by converting back using sos2tf...
-% see https://ccrma.stanford.edu/~jos/fp/Matlab_Example.html
-[Bh,Ah] = sos2tf(sos,g);
-format long;
-disp(sprintf('Relative L2 numerator error: %g',...
-	norm(Bh-Bi)/norm(Bi)));
-% Relative L2 numerator error:
-disp(sprintf('Relative L2 denominator error: %g',...
-	norm(Ah-Ai)/norm(Ai)));
-% check for stability of biquad poles (A's, col 4 : 6 of sos)
-for i = 1: length(sos);stable(i) = stabilitycheck(i,4:6);end
+## [sos,g] = tf2sos(Bi,Ai)
+## % Check accuracy of biquad implementation by converting back using sos2tf...
+## % see https://ccrma.stanford.edu/~jos/fp/Matlab_Example.html
+## [Bh,Ah] = sos2tf(sos,g);
+## format long;
+## disp(sprintf('Relative L2 numerator error: %g',...
+## 	norm(Bh-Bi)/norm(Bi)));
+## % Relative L2 numerator error:
+## disp(sprintf('Relative L2 denominator error: %g',...
+## 	norm(Ah-Ai)/norm(Ai)));
+## % check for stability of biquad poles (A's, col 4 : 6 of sos)
+## for i = 1: length(sos);stable(i) = stabilitycheck(i,4:6);end
 
 
 ## ###############################################
@@ -414,4 +408,5 @@ disp(length(Ai));
 for i = 1:length(Ai); printf([',' num2str(Ai(i))]);end;
 disp('\n');
 for i = 1:length(Bi); printf([',' num2str(Bi(i))]);end;
+
 
