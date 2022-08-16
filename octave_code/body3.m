@@ -27,6 +27,7 @@ endfunction
 ## duration - vector of attack, sustain, release durations in ms
 ## outpus:
 ## a - vector of adsr envelope values
+## from https://web.nmsu.edu/~pdeleon/Research/Publications/ASEE_GSW_2000.pdf
 function a = adsr (target,gain,duration,fs,envdur)
   a = zeros(round(fs*envdur),1); 
   duration = round(duration./1000.*fs); % envelope duration in samp
@@ -90,7 +91,7 @@ bw3 = 5;
 ## ############################
 
 ## mode 1
-r = 0.97;
+r = 0.98;
 [B1,A1] = invfilter(fc1,bw1,r,fs);
 H1 = freqz(B1,A1,fkk,fs);
 H1dB = 20*log10(H1);
@@ -110,7 +111,7 @@ H2invdB = 20*log10(H2inv);
 H2invdBN = H2invdB - offset;
 
 ## mode 3
-r = 0.97;
+r = 0.98;
 [B3,A3] = invfilter(fc3,bw3,r,fs);
 H3 = freqz(B3,A3,fkk,fs);
 H3dB = 20*log10(H3);
@@ -126,10 +127,10 @@ plot(fkk,[SdBN,H1dBN',H1invdBN',H2dBN',H2invdBN',H3dBN',H3invdBN']);
 grid minor on;
 axis([0 500 -80 0]);
 
+
 ## #####################################
 ## apply inverse filters to get residues
 ## #####################################
-
 
 res1 = filter(A1,B1,signal);
 res2 = filter(A2,B2,res1);
@@ -142,49 +143,6 @@ axis([0, 80, -1, 1]);
 grid minor on;
 legend("signal","res1","res2","res3");
 
-
-## ################
-## fit adsr to res3
-## ################
-
-target = [0.999;0.05;0.00];
-gain = [0.05;0.006;0.003];
-duration = [1;20;50];
-env = adsr(target,gain,duration,fs,t(end));
-figure;
-plot(t,env);
-
-x = (rand(round(fs*t(end)),1) - 0.5).*2;
-xlp = lpf(2,0.4,x);
-y = env .* xlp; % Modulate
-y = y./max(y);
-sound(y,fs);
-audiowrite("adsrimpulse.wav",y,fs);
-
-figure;
-set(gcf, 'Position', get(0, 'Screensize'));
-plot(t.*1000,[res3, y]);
-axis([0, 80, -1, 1]);
-grid minor on;
-legend("res3","env");
-
-
-## reconstitute res2, res1 and signal...
-imp = zeros(length(signal),1);
-imp(1) = 1;
-res2synth = filter(B3,A3,y);
-res1synth = filter(B2,A2,res2synth);
-signalsynth = filter(A1,B1,res1synth);
-
-figure;
-set(gcf, 'Position', get(0, 'Screensize'));
-plot(t.*1000,[res1synth, res1]);
-axis([0, 80, -1, 1]);
-grid minor on;
-legend("res2synth","res2");
-
-sound(y,fs);
-sound(res2synth,fs);
 
 ## ######################################################
 ## check FR after applying each biquad as inverse of mode
@@ -215,6 +173,94 @@ plot(fkk,[SdBN,S1dBN,S2dBN,S3dBN]);
 axis([0 500 -60 0]);
 grid minor on;
 legend("SdBN","S1dBN","S2dBN","S3dBN");
+
+
+## #######################################
+## fit adsr to res3 in time and freqdomain
+## #######################################
+
+target = [0.999;0.05;0.00];
+gain = [0.05;0.006;0.003];
+duration = [1;20;50];
+env = adsr(target,gain,duration,fs,t(end));
+
+figure;
+set(gcf, 'Position', get(0, 'Screensize'));
+plot(t.*1000,env);
+axis([0 80 -1 1]);
+grid minor on;
+
+S3mp = mps(S3full);
+S3mpp = S3mp(iposFreq);
+wk = iposFreq.*pi./iposFreq(end);
+wkk = wk(1:2^7:end);
+wt = 1./(wkk+1);
+S3mppi = interp1(wk,S3mpp,wkk);
+S3mppidBN = 20*log10(S3mppi) - offset;
+iforder = 10;
+[B3if,A3if] = invfreqz(S3mppi,wkk,iforder,iforder,wt);
+S3if = freqz(B3if,A3if,fkk,fs);
+S3ifdB = 20*log10(S3if);
+S3ifdBN = S3ifdB - offset;
+
+figure;
+set(gcf, 'Position', get(0, 'Screensize'));
+plot(wkk./pi.*fkk(end),S3mppidBN,"o-");hold on;
+plot(fkk,[S3dBN, S3ifdBN']);
+grid minor on;
+legend("S3mppidBN","S3dBN","S3ifdBN");
+
+## generate synthesised noise burst, with IR shaped by adsr
+rand("seed",1);
+x = (rand(round(fs*t(end)),1) - 0.5).*2;
+# xlp = lpf(5,0.9,x);
+y =  env .* x; % Modulate
+
+## shape the FR of the noise burst using the LPF designed using invfreqz,ie [B3if,A3if]
+## res3synth = lpf(2,0.9,y);
+res3synth_ = filter(B3if,A3if,y);
+res3synth = res3synth_./max(res3synth_);
+## y = y./max(y);
+sound(res3synth,fs);
+audiowrite("adsrimpulse.wav",res3synth,fs);
+
+figure;
+set(gcf, 'Position', get(0, 'Screensize'));
+plot(t.*1000,[res3, res3synth]);
+axis([0, 80, -1, 1]);
+grid minor on;
+legend("res3","res3synth");
+
+## FR after applying biquad 3
+S3synthfull = fft(res3synth,Nfft);
+S3synth = S3synthfull(iposFreq);
+S3synthdB = 20*log10(abs(S3synth));
+S3synthdBN = S3synthdB - offset;
+
+figure;
+set(gcf, 'Position', get(0, 'Screensize'));
+plot(fkk,[S3dBN, S3synthdBN]);
+#axis([0, 80, -1, 1]);
+grid minor on;
+legend("S3dBN","S3synthdBN");
+
+
+## #####################################
+## reconstitute res2, res1 and signal...
+## #####################################
+
+res2synth = filter(B3,A3,res3synth);
+res1synth = filter(B2,A2,res2synth);
+signalsynth = filter(B1,A1,res1synth);
+
+figure;
+set(gcf, 'Position', get(0, 'Screensize'));
+## plot(t.*1000,[res2,res2synth]);
+plot(t.*1000,[signalsynth,signal, res1synth, res1, res2synth, res2]);
+axis([0 80 -1 1]);
+grid minor on;
+legend("signalsynth","signal", "res1synth", "res1", "res2synth", "res2");
+
 
 
 ## #########
