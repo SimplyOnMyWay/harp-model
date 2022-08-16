@@ -59,3 +59,7 @@ iend = find(abs(t-2.0)<T/2);
 sound(e_sig(1:iend),fs);
 sound(y(1:iend),fs);
 
+
+## fit adsr with LP noise to e_sig
+## per https://www.dsprelated.com/freebooks/pasp/Approximating_Shortened_Excitations_Noise.html
+
