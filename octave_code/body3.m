@@ -179,6 +179,7 @@ legend("SdBN","S1dBN","S2dBN","S3dBN");
 ## fit adsr to res3 in time and freqdomain
 ## #######################################
 
+## generate synthesised noise burst, with IR shaped by adsr
 target = [0.999;0.05;0.00];
 gain = [0.05;0.006;0.003];
 duration = [1;20;50];
@@ -210,7 +211,6 @@ plot(fkk,[S3dBN, S3ifdBN']);
 grid minor on;
 legend("S3mppidBN","S3dBN","S3ifdBN");
 
-## generate synthesised noise burst, with IR shaped by adsr
 rand("seed",1);
 x = (rand(round(fs*t(end)),1) - 0.5).*2;
 # xlp = lpf(5,0.9,x);
@@ -280,4 +280,16 @@ audiowrite("res3.wav",res3,fs);
 
 
 
+
+## print coeffs
+disp("\n");
+printf(["A1: "]);for i = 1:length(A1); printf(["," num2str(A1(i))]);end;disp("\n");
+printf(["B1: "]);for i = 1:length(B1); printf(["," num2str(B1(i))]);end;disp("\n");
+printf(["A2: "]);for i = 1:length(A2); printf(["," num2str(A2(i))]);end;disp("\n");
+printf(["B2: "]);for i = 1:length(B2); printf(["," num2str(B2(i))]);end;disp("\n");
+printf(["A3: "]);for i = 1:length(A3); printf(["," num2str(A3(i))]);end;disp("\n");
+printf(["B3: "]);for i = 1:length(B3); printf(["," num2str(B3(i))]);end;disp("\n");
+
+printf(["A3if: "]);for i = 1:length(A3if); printf(["," num2str(A3if(i))]);end;disp("\n");
+printf(["B3if: "]);for i = 1:length(B3if); printf(["," num2str(B3if(i))]);end;disp("\n");
 

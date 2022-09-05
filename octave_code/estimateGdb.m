@@ -274,8 +274,8 @@ Smp = 10 .^ (Cf/20); % minimum-phase spectrum
 Smpp = Smp(1:Ns); % nonnegative-frequency portion
 wt = 1 ./ (fk+1); % typical weight fn for audio
 wk = 2*pi*fk/fs;
-NZ = 30;
-NP = 30;
+NZ = 19;
+NP = 19;
 [Bi,Ai] = invfreqz(Smpp,wk,NZ,NP,wt);
 Hh = freqz(Bi,Ai,Ns);
 
