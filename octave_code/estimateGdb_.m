@@ -8,6 +8,15 @@
 close all;
 clear all;
 
+## functions
+
+## usage: dbval = mydb (val)
+##
+##
+function dbval = mydb (val)
+  dbval = 20*log10(val);
+endfunction
+
 ## ##############################################################
 ## f0 is the fundamental frequency of the string being identified
 ## ##############################################################
@@ -178,18 +187,6 @@ gdb_smooth = regdatasmooth(F_peaks, gdb_peaks, "lambda", lambda, "xhat", F_smoot
 ## legend("gdb_{peaks}","gdb_{smooth}");
 
 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% interpolate the peaks at orginal freq values
-% NOT USED!
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% F_interp = linspace(F(1),F(end),2^11); %high sampling density to help reduce time aliasing per https://ccrma.stanford.edu/~jos/filters/Matlab_listing_mps_m.html
-% gdb_pinterp = interp1(F_peaks,gdb_peaks,F_interp);
-
-% figure;
-% plot(F_interp,gdb_pinterp);
-% hold on; plot(F_peaks,gdb_peaks,'r*'); grid minor on
-
-
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % convert gdb into whole spectrum "fft buffer format",
 % i.e., dc followed by positive freq vals, followed by neg freq vals, and power of 2 in length
@@ -214,64 +211,14 @@ F_whole = [F_smooth F_smooth(end) + F_smooth(2:end-1)];
 % https://ccrma.stanford.edu/~jos/filters/Poles_Zeros_Cepstrum.html#sec:cepstrum
 % %%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-#{
-gdb_mp = mps(gdb_whole);
-figure;
-subplot(2,1,1);
-plot(F_whole,gdb_whole,F_whole,-abs(gdb_mp));legend("gdb","gdb mp"); grid minor on;
-ylabel("magnitude response (dB)");
-xlabel("frequency (Hz)");
-subplot(2,1,2);
-plot(F_whole,angle(gdb_whole),F_whole,angle(gdb_mp));legend("gdb","gdb mp"); grid minor on;
-ylabel("phase response (degrees)");
-xlabel("frequency (Hz)");
-set(gcf, 'Position', get(0, 'Screensize'));
-#}
-
-
-## ####################
-## alternative mp code!
-## ####################
 fk = F_smooth;
 Nfft = 2^10;                     # 512
-Ns = Nsmooth; if Ns~=Nfft/2+1, error("confusion"); end
+Ns = Nsmooth; 
 gdb_s = gdb_smooth';
 Sdb = [gdb_s,gdb_s(Ns-1:-1:2)]; % install negative-frequencies
 
-S = 10 .^ (Sdb/20); % convert to linear magnitude
-s = ifft(S); % desired impulse response
-s = real(s); % any imaginary part is quantization noise
-tlerr = 100*norm(s(round(0.9*Ns:1.1*Ns)))/norm(s);
-disp(sprintf(['Time-limitedness check: Outer 20%% of impulse ' ...
-              'response is %0.2f %% of total rms'],tlerr));
-% = 0.02 percent
-if tlerr>1.0 % arbitrarily set 1% as the upper limit allowed
-  error('Increase Nfft and/or smooth Sdb');
-end
+Smpp = minphase(fk,Nfft,Ns,Sdb);
 
-
-## figure;
-## plot(s, '-k'); grid('on');   title('Impulse Response');
-## xlabel('Time (samples)');   ylabel('Amplitude');
-
-c = ifft(Sdb); % compute real cepstrum from log magnitude spectrum
-% Check aliasing of cepstrum (in theory there is always some):
-caliaserr = 100*norm(c(round(Ns*0.9:Ns*1.1)))/norm(c);
-disp(sprintf(['Cepstral time-aliasing check: Outer 20%% of ' ...
-    'cepstrum holds %0.2f %% of total rms'],caliaserr));
-% = 0.09 percent
-if caliaserr>1.0 % arbitrary limit
-  error('Increase Nfft and/or smooth Sdb to shorten cepstrum');
-end
-% Fold cepstrum to reflect non-min-phase zeros inside unit circle:
-% If complex:
-% cf = [c(1), c(2:Ns-1)+conj(c(Nfft:-1:Ns+1)), c(Ns), zeros(1,Nfft-Ns)];
-cf = [c(1), c(2:Ns-1)+c(Nfft:-1:Ns+1), c(Ns), zeros(1,Nfft-Ns)];
-Cf = fft(cf); % = dB_magnitude + j * minimum_phase
-Smp = 10 .^ (Cf/20); % minimum-phase spectrum
-
-Smpp = Smp(1:Ns); % nonnegative-frequency portion
 wt = 1 ./ (fk+1); % typical weight fn for audio
 wk = 2*pi*fk/fs;
 NZ = 30;
@@ -279,12 +226,6 @@ NP = 30;
 [Bi,Ai] = invfreqz(Smpp,wk,NZ,NP,wt);
 Hh = freqz(Bi,Ai,Ns);
 
-## usage: dbval = mydb (val)
-##
-##
-function dbval = mydb (val)
-  dbval = 20*log10(val);
-endfunction
 
 figure;
 set(gcf, 'Position', get(0, 'Screensize'));
@@ -296,9 +237,6 @@ xlabel('Frequency (Hz)');
 ylabel('Magnitude (dB)');
 title('Magnitude Frequency Response');
 legend('Desired','Filter','Measured');
-
-## figure;                         
-## freqz(Bi,Ai);
 
 [H,w] = freqz(Bi,Ai);
 figure;
@@ -317,91 +255,6 @@ ylabel("phase response (Hz)");
 xlabel("frequency (Hz)");
 grid minor on;
 legend("desired","filter","location","SouthWest");
-
-## % %%%%%%%%%%%%%%%%%%%%%%%5%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-## % Fit filter Bi(z)/Ai(z) to gdb_mp, using function invfreq
-## % code taken from:
-## % https://ccrma.stanford.edu/realsimple/vguitar/Fitting_Filters_Matlab.html
-## % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-## % Note that Hmin corresponds to the response of the min-phase filter
-## % that we want to fit to obtain filter parameters using invfreqz
-
-
-## Hmin = gdb_mp;
-## Npt = length(F_whole);
-## wH = (0:((Npt/2)-1))*2*pi/Npt;
-## wH(1) = wH(2);
-## wt = 1./wH;
-
-
-
-
-## fk = F_whole(1:Nsmooth);
-## wt = 1./ (fk+1);
-## fs = F_smooth(2);
-## wk = 2*pi*fk/fs;
-
-
-
-## [Bi,Ai] = invfreqz(Hmin(1:Npt/2),wH,25,25,wt);
-## figure;freqz(Bi,Ai);
-## set(gcf, 'Position', get(0, 'Screensize'));
-## title('freqz of filter obtained using invfreqz');
-
-
-                
-## % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-## % freqz(Bi,Ai) looks off to me, and so plotting magn of fitted filter as a check
-
-                
-## [H,w] = freqz(Bi,Ai);
-## figure;
-## freqz_plot(w,H);
-## set(gcf, 'Position', get(0, 'Screensize'));
-
-## figure;
-## subplot(211);
-## plot(w./pi,real(H));
-## set(gcf, 'Position', get(0, 'Screensize'));
-## grid minor on;
-## subplot(212);
-## plot(w./pi,rad2deg(unwrap(angle(H))));
-## grid minor on;
-
-## figure;
-## set(gcf, 'Position', get(0, 'Screensize'));
-## wd = w*F(end)/3.14;
-## plot(wd, -abs(H),'linewidth',2);
-## hold on; 
-## plot(F_smooth,gdb_smooth); %original gdb interpolated
-## plot(F_peaks,gdb_peaks,'r*');
-## grid minor on;
-## ylabel("magnitude response (dB)");
-## xlabel("frequency (Hz)");
-## legend("-abs(Hfilter)","gdb_{smooth}","gdb_{peaks}","location","southwest");
-
-
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% IF NEEDED FOR IMPLEMENTING THE LOOP FILTER...
-% direct form I to biquads in series...
-% see https://ccrma.stanford.edu/~jos/fp/Series_Second_Order_Sections.html
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-[sos,g] = tf2sos(Bi,Ai)
-% Check accuracy of biquad implementation by converting back using sos2tf...
-% see https://ccrma.stanford.edu/~jos/fp/Matlab_Example.html
-[Bh,Ah] = sos2tf(sos,g);
-format long;
-disp(sprintf('Relative L2 numerator error: %g',...
-	norm(Bh-Bi)/norm(Bi)));
-% Relative L2 numerator error:
-disp(sprintf('Relative L2 denominator error: %g',...
-	norm(Ah-Ai)/norm(Ai)));
-% check for stability of biquad poles (A's, col 4 : 6 of sos)
-for i = 1: length(sos);stable(i) = stabilitycheck(i,4:6);end
-
-
-
 
 ## ###############################################
 ## Ai and Bi in rows to copy over to c++ DWG model

@@ -67,7 +67,7 @@ t = T:T:T*length(signal);
 istart = find(abs(t-0.001)<T/2);
 iend = find(abs(t-0.200)<T/2);
 
-Nfft = 2^20;  #I think this is oversampling by factor of 2^3 = 8, but it seems to need it as FR looks jaggedy below 2^16
+Nfft = 2^16;  #I think this is oversampling by factor of 2^3 = 8, but it seems to need it as FR looks jaggedy below 2^16
 Sfull = fft(signal(istart:iend),Nfft);
 iposFreq = 1:Nfft/2+1;
 S = Sfull(iposFreq);
@@ -79,12 +79,12 @@ fkk = fk(iposFreq);
 
 
 ## identify central freq and bandwidth from observing the full FR
-fc1 = 104.7;
-bw1 = 3;
-fc2 = 205.4;
-bw2 = 10;
-fc3 = 247.5;
-bw3 = 5;
+fc1 = 140;
+bw1 = 10;
+fc2 = 350;
+bw2 = 75;
+fc3 = 870;
+bw3 = 150;
 
 
 ## ############################
@@ -112,7 +112,7 @@ H2invdB = 20*log10(H2inv);
 H2invdBN = H2invdB - offset;
 
 ## mode 3
-r = 0.98;
+r = 0.9;
 [B3,A3] = invfilter(fc3,bw3,r,fs);
 H3 = freqz(B3,A3,fkk,fs);
 H3dB = 20*log10(H3);
@@ -126,7 +126,7 @@ figure;
 set(gcf, 'Position', get(0, 'Screensize'));
 plot(fkk,[SdBN,H1dBN',H1invdBN',H2dBN',H2invdBN',H3dBN',H3invdBN']);
 grid minor on;
-axis([0 1000 -80 0]);
+axis([0 3000 -80 0]);
 
 ## #####################################
 ## apply inverse filters to get residues
@@ -170,7 +170,7 @@ S3dBN = S3dB - offset;
 figure;
 set(gcf, 'Position', get(0, 'Screensize'));
 plot(fkk,[SdBN,S1dBN,S2dBN,S3dBN]);
-axis([0 500 -60 0]);
+axis([0 3000 -60 0]);
 grid minor on;
 legend("SdBN","S1dBN","S2dBN","S3dBN");
 
