@@ -30,7 +30,7 @@ endfunction
 ## from https://web.nmsu.edu/~pdeleon/Research/Publications/ASEE_GSW_2000.pdf
 function a = adsr (target,gain,duration,fs,envdur)
   a = zeros(round(fs*envdur),1); 
-  duration = round(duration./1000.*fs); % envelope duration in samp
+  duration = round(duration./1000.*fs); % convert envelope duration from ms to number of samples
   ## Attack phase
   start = 2;
   stop = duration(1);
@@ -57,7 +57,7 @@ endfunction
 ## read in body impulse response and set up its FR
 ## ###############################################
 
-filename = "mcliag-body-6.wav";
+filename = "mcliag-body-20.wav";
 # filename = "gtrbody.wav";
 [signal,fs] = audioread(filename);
 sound(signal,fs);
@@ -65,7 +65,7 @@ sound(signal,fs);
 T = 1/fs;
 t = T:T:T*length(signal);
 istart = find(abs(t-0.001)<T/2);
-iend = find(abs(t-0.200)<T/2);
+iend = find(abs(t-0.150)<T/2);
 
 Nfft = 2^16;  #I think this is oversampling by factor of 2^3 = 8, but it seems to need it as FR looks jaggedy below 2^16
 Sfull = fft(signal(istart:iend),Nfft);
@@ -79,12 +79,19 @@ fkk = fk(iposFreq);
 
 
 ## identify central freq and bandwidth from observing the full FR
-fc1 = 140;
+fc1 = 58;
 bw1 = 10;
-fc2 = 350;
-bw2 = 75;
-fc3 = 870;
-bw3 = 150;
+fc2 = 69;
+bw2 = 7;
+fc3 = 140;
+bw3 = 7;
+fc4 = 210;
+bw4 = 7;
+fc5 = 230;
+bw5 = 7;
+fc6 = 285;
+bw6 = 7;
+
 
 
 ## ############################
@@ -92,7 +99,7 @@ bw3 = 150;
 ## ############################
 
 ## mode 1
-r = 0.98;
+r = 0.99;
 [B1,A1] = invfilter(fc1,bw1,r,fs);
 H1 = freqz(B1,A1,fkk,fs);
 H1dB = 20*log10(H1);
@@ -102,7 +109,7 @@ H1invdB = 20*log10(H1inv);
 H1invdBN = H1invdB - offset;
 
 ## mode 2
-r = 0.9;
+r = 0.995; #0.996;
 [B2,A2] = invfilter(fc2,bw2,r,fs);
 H2 = freqz(B2,A2,fkk,fs);
 H2dB = 20*log10(H2);
@@ -112,7 +119,7 @@ H2invdB = 20*log10(H2inv);
 H2invdBN = H2invdB - offset;
 
 ## mode 3
-r = 0.9;
+r = 0.993; #0.975;
 [B3,A3] = invfilter(fc3,bw3,r,fs);
 H3 = freqz(B3,A3,fkk,fs);
 H3dB = 20*log10(H3);
@@ -121,12 +128,43 @@ H3inv = freqz(A3,B3,fkk,fs);
 H3invdB = 20*log10(H3inv);
 H3invdBN = H3invdB - offset;
 
+## mode 4
+r = 0.999; #0.975;
+[B4,A4] = invfilter(fc4,bw4,r,fs);
+H4 = freqz(B4,A4,fkk,fs);
+H4dB = 20*log10(H4);
+H4dBN = H4dB - offset;
+H4inv = freqz(A4,B4,fkk,fs);
+H4invdB = 20*log10(H4inv);
+H4invdBN = H4invdB - offset;
+
+## mode 5
+r = 0.999; #0.975;
+[B5,A5] = invfilter(fc5,bw5,r,fs);
+H5 = freqz(B5,A5,fkk,fs);
+H5dB = 20*log10(H5);
+H5dBN = H5dB - offset;
+H5inv = freqz(A5,B5,fkk,fs);
+H5invdB = 20*log10(H5inv);
+H5invdBN = H5invdB - offset;
+
+## mode 6
+r = 0.999; #0.975;
+[B6,A6] = invfilter(fc6,bw6,r,fs);
+H6 = freqz(B6,A6,fkk,fs);
+H6dB = 20*log10(H6);
+H6dBN = H6dB - offset;
+H6inv = freqz(A6,B6,fkk,fs);
+H6invdB = 20*log10(H6inv);
+H6invdBN = H6invdB - offset;
+
+
 ## plot biquad fits and their inverses, against original SdB
 figure;
 set(gcf, 'Position', get(0, 'Screensize'));
-plot(fkk,[SdBN,H1dBN',H1invdBN',H2dBN',H2invdBN',H3dBN',H3invdBN']);
+plot(fkk,[SdBN,H1dBN',H1invdBN',H2dBN',H2invdBN',H3dBN',H3invdBN',H4dBN',H4invdBN',H5dBN',H5invdBN',H6dBN',H6invdBN']);
 grid minor on;
-axis([0 3000 -80 0]);
+axis([0 500 -80 0]);
 
 ## #####################################
 ## apply inverse filters to get residues
@@ -135,13 +173,16 @@ axis([0 3000 -80 0]);
 res1 = filter(A1,B1,signal);
 res2 = filter(A2,B2,res1);
 res3 = filter(A3,B3,res2);
+res4 = filter(A4,B4,res3);
+res5 = filter(A5,B5,res4);
+res6 = filter(A6,B6,res5);
 
 figure;
 set(gcf, 'Position', get(0, 'Screensize'));
-plot(t.*1000,[signal, res1, res2, res3]);
+plot(t.*1000,[signal, res1, res2, res3, res4,res5,res6]);
 axis([0, 80, -1, 1]);
 grid minor on;
-legend("signal","res1","res2","res3");
+legend("signal","res1","res2","res3","res4","res5","res6");
 
 
 ## ######################################################
@@ -166,13 +207,31 @@ S3 = S3full(iposFreq);
 S3dB = 20*log10(abs(S3));
 S3dBN = S3dB - offset;
 
+## FR after applying biquad 4
+S4full = fft(res4,Nfft);
+S4 = S4full(iposFreq);
+S4dB = 20*log10(abs(S4));
+S4dBN = S4dB - offset;
+
+## FR after applying biquad 5
+S5full = fft(res5,Nfft);
+S5 = S5full(iposFreq);
+S5dB = 20*log10(abs(S5));
+S5dBN = S5dB - offset;
+
+## FR after applying biquad 6
+S6full = fft(res6,Nfft);
+S6 = S6full(iposFreq);
+S6dB = 20*log10(abs(S6));
+S6dBN = S6dB - offset;
+
 ## plot FR of original signal, and after applying each inverse filter
 figure;
 set(gcf, 'Position', get(0, 'Screensize'));
-plot(fkk,[SdBN,S1dBN,S2dBN,S3dBN]);
-axis([0 3000 -60 0]);
+plot(fkk,[SdBN,S1dBN,S2dBN,S3dBN,S4dBN,S5dBN,S6dBN]);
+axis([0 500 -60 0]);
 grid minor on;
-legend("SdBN","S1dBN","S2dBN","S3dBN");
+legend("SdBN","S1dBN","S2dBN","S3dBN","S4dBN","S5dBN","S6dBN");
 
 
 ## #######################################
@@ -190,6 +249,9 @@ set(gcf, 'Position', get(0, 'Screensize'));
 plot(t.*1000,env);
 axis([0 80 -1 1]);
 grid minor on;
+title("ADSR time-series plot");
+xlabel("time (ms)");
+ylabel("amplitude");
 
 S3mp = mps(S3full);
 S3mpp = S3mp(iposFreq);
@@ -203,7 +265,6 @@ iforder = 10;
 S3if = freqz(B3if,A3if,fkk,fs);
 S3ifdB = 20*log10(S3if);
 S3ifdBN = S3ifdB - offset;
-
 figure;
 set(gcf, 'Position', get(0, 'Screensize'));
 plot(wkk./pi.*fkk(end),S3mppidBN,"o-");hold on;
