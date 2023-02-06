@@ -79,24 +79,44 @@ fkk = fk(iposFreq);
 
 
 ## identify central freq and bandwidth from observing the full FR
-fc1 = 58;
-bw1 = 10;
-r1 = 0.99;
-fc2 = 69;
-bw2 = 7;
-r2 = 0.991;
-fc3 = 210;
+## fc1 = 58;
+## bw1 = 10;
+## r1 = 0.99;
+## fc2 = 69;
+## bw2 = 7;
+## r2 = 0.991;
+## fc3 = 210;
+## bw3 = 15;
+## r3 = 0.955;
+## fc4 = 229;
+## bw4 = 15;
+## r4 = 0.949; 
+## fc5 = 266;
+## bw5 = 12;
+## r5 = 0.939;
+## fc6 = 286;
+## bw6 = 15;
+## r6 = 0.9;
+
+
+fc1 = 64;
+bw1 = 20;
+r1 = 0.999;
+fc2 = 220;
+bw2 = 20;
+r2 = 0.997;
+fc3 = 280;
 bw3 = 15;
-r3 = 0.955;
+r3 = 0.9;
 fc4 = 229;
 bw4 = 15;
-r4 = 0.949; 
+r4 = 1.0;
 fc5 = 266;
 bw5 = 12;
-r5 = 0.939;
+r5 = 1.0;
 fc6 = 286;
 bw6 = 15;
-r6 = 0.9;
+r6 = 1.0;
 
 
 ## ############################
@@ -158,13 +178,18 @@ H6invdB = 20*log10(H6inv);
 H6invdBN = H6invdB - offset;
 
 
+HcumdBN = H1dB + H2dB + H3dB - offset; # + S4dBN + S5dBN + S6dBN;
+
+
+
+
 ## plot biquad fits and their inverses, against original SdB
 figure;
 set(gcf, 'Position', get(0, 'Screensize'));
 subplot(3,3,1);                 
-plot(fkk,[SdBN,H1dBN',H1invdBN',H2dBN',H2invdBN',H3dBN',H3invdBN',H4dBN',H4invdBN',H5dBN',H5invdBN',H6dBN',H6invdBN']);
+plot(fkk,[SdBN,H1dBN',H1invdBN',H2dBN',H2invdBN',H3dBN',H3invdBN',H4dBN',H4invdBN',H5dBN',H5invdBN',H6dBN',H6invdBN',HcumdBN']);
 title("Freq Response - Original along with filters each hand-tuned \nto fit a peak for each body mode I identify");
-legend("SdBN","H1dBN","H1invdBN","H2dBN","H2invdBN","H3dBN","H3invdBN","H4dBN","H4invdBN","H5dBN","H5invdBN","H6dBN","H6invdBN");
+legend("SdBN","H1dBN","H1invdBN","H2dBN","H2invdBN","H3dBN","H3invdBN","H4dBN","H4invdBN","H5dBN","H5invdBN","H6dBN","H6invdBN","HcumdBN");
 grid minor on;
 axis([0 500 -80 0]);
 
@@ -232,14 +257,15 @@ S6 = S6full(iposFreq);
 S6dB = 20*log10(abs(S6));
 S6dBN = S6dB - offset;
 
+
 ## plot FR of original signal, and after applying each inverse filter
 #figure;
 #set(gcf, 'Position', get(0, 'Screensize'));
 subplot(3,3,3);
-plot(fkk,[SdBN,S1dBN,S2dBN,S3dBN,S4dBN,S5dBN,S6dBN]);
-axis([0 500 -60 0]);
+plot(fkk,[SdBN,S1dBN,S2dBN,S3dBN,S4dBN,S5dBN,S6dBN,HcumdBN']);
+axis([0 500 -150 0]);
 grid minor on;
-legend("SdBN","S1dBN","S2dBN","S3dBN","S4dBN","S5dBN","S6dBN");
+legend("SdBN","S1dBN","S2dBN","S3dBN","S4dBN","S5dBN","S6dBN","Sum of S1dBN-S6dBN");
 
 
 ## ###############################################################
@@ -327,14 +353,16 @@ res2synth = filter(B3,A3,res3synth);
 res1synth = filter(B2,A2,res2synth);
 signalsynth = filter(B1,A1,res1synth);
 
-#figure;
-#set(gcf, 'Position', get(0, 'Screensize'));
+
+figure;
+set(gcf, 'Position', get(0, 'Screensize'));
 ## plot(t.*1000,[res2,res2synth]);
-subplot(3,3,8);
-plot(t.*1000,[signalsynth,signal, res1synth, res1, res2synth, res2]);
+##subplot(3,3,8);
+#plot(t.*1000,[signalsynth,signal, res1synth, res1, res2synth, res2]);
+plot(t.*1000,[res3, res3synth]);
 axis([0 80 -1 1]);
 grid minor on;
-legend("signalsynth","signal", "res1synth", "res1", "res2synth", "res2");
+#legend("signalsynth","signal", "res1synth", "res1", "res2synth", "res2");
 
 
 
