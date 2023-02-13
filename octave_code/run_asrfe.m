@@ -12,6 +12,8 @@ clear all;
 global SR = 44100;
 global fRec0 = [0,0];
 
+disp("hey");
+
 ## usage: pole = tau2pole (tau)
 ##
 ##
@@ -25,7 +27,7 @@ endfunction
 ##
 ##
 function y = smooth (s,x)
-  fRec0 = [0,0];
+  global fRec0
   for n = 1:length(x)
     fRec0(1) = (1 - s)*x(n) + s*fRec0(2);
     y(n) = fRec0(1);
@@ -51,8 +53,8 @@ function envelope = asrfe (attT60,susLvl,relT60,finLvl,gate)
 endfunction
 
 
-gateSignal1 = ones(1, 10);
-gateSignal0 = zeros(1, 10);
+gateSignal1 = ones(1, 30);
+gateSignal0 = zeros(1, 100);
 gateSignal = horzcat(gateSignal1,gateSignal0);
 
 for i = 1:length(gateSignal)
