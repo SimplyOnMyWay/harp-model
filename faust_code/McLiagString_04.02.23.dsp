@@ -1,18 +1,52 @@
 import("stdfaust.lib");
-in = library("instruments.lib");
-process = excitation with { //: McLString <: _,_ with {
-  excitation = g : en.adsr(a,d,s,r) * no.noise with {
-	a = 0.05;
+process = en.asrfe(attT60,susLvl,relT60,finLvl,gate) with { //excitation : bodyMode1 : bodyMode2 : bodyMode3 <: _,_ with { //: McLiagString <: _,_  with { 
+  attT60 = 0.6;
+  susLvl = 0.75;
+  relT60 = 0.1;
+  finLvl = 0.0;
+  gate = button("g");
+  
+  excitation = g : en.are(a,r) * no.noise : envFR with {
+	a = 0.02;//0.0005;
 	d = 0.01;
     s = 0.5;
-    r = 0.01;
-	g = button("pluck!"); //(1-(1@500)) + 0.5*(1@750-(1@1700)); //
+    r = 0.05;//0.04;
+	g = 1 - (1@50);//(1-(1@500)) + 0.5*(1@750-(1@1700)); //
+    fb1 = 1.0;
+    fb2 = 1.0;
+    damp = 0.5;
+    spread = 1;
+    envFR = fi.iir(bcoeffs,acoeffs) with {
+        bcoeffs = 1.0038,-0.16283,0.0062466,-0.10801,-0.24058,-0.029842,-0.121,-0.16796,-0.15775,-0.20561,0.0077204;
+        acoeffs = -1.3267,0.61699,-0.75244,0.5751,-0.2797,0.497,-0.45368,0.3945,-0.22875,0.0441;
+    };
   };
-  McLString(pluck) = (pluck + dline) ~ (loopGain : loopFilter) with {
+  bodyMode1 = fi.tf21(b0,b1,b2,a1,a2) with {
+    b0 = 1;
+    b1 = -1.9786;//-1.9583;
+    b2 = 0.97882;//0.95958;
+    a1 = -1.9986; //1.9983;
+    a2 = 0.99869; //0.99915;
+  };
+  bodyMode2 = fi.tf21(b0,b1,b2,a1,a2) with {
+    b0 = 1;
+    b1 = -1.989; //-1.7944;
+    b2 = 0.98912; //0.8077;
+    a1 = -1.999; //-1.9937;
+    a2 = 0.99908; //0.99715;
+  };
+  bodyMode3 = fi.tf21(b0,b1,b2,a1,a2) with {
+    b0 = 1;
+    b1 = -1.9848;//-1.9537;
+    b2 = 0.98515;//0.95903;
+    a1 = -1.9987;//-1.9936;
+    a2 = 0.99908;//0.99858;
+  };
+  McLiagString(pluck) = (pluck + dline) ~ (loopGain : loopFilter) with {
 	dline = de.delay(n,d) with {
 	  n = 2048;
 	  d = ma.SR/f;
-	  f = 264;
+	  f = 264*2;
 	};
 	// ### direct-form (I?) IIR filter implementation ###
 	loopFilter = fi.iir(Bcoeff,Acoeff) with {
@@ -20,6 +54,6 @@ process = excitation with { //: McLString <: _,_ with {
 // note av[0] = 1 is assumed by Faust!/
 	  Acoeff = 0.52874,-0.064736,0.48365,0.65922,0.40633,0.10369,0.25905,0.11832,0.10181,0.23729,0.11339,0.026769,0.24361,0.11236,0.13613,0.29448,0.22862,0.20701,0.17915,0.23339,0.2578,0.18605,0.15629,0.1266,0.10381,0.10485,0.084,0.0772,0.019029,0.016185;
   	};
-	loopGain(x) = 0.99 * x;
+	loopGain(x) = 0.999 * x;
   };
 };			

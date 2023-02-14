@@ -1,5 +1,7 @@
 clear all; close all;
 
+source("envelopes.m");
+
 ##################
 ## local functions
 ## ###############
@@ -273,15 +275,30 @@ legend("SdBN","S1dBN","S2dBN","S3dBN","S4dBN","S5dBN","S6dBN","Sum of S1dBN-S6dB
 ## ###############################################################
 
 ## generate synthesised noise burst, with IR shaped by adsr
-target = [0.999;0.05;0.00];
-gain = [0.05;0.006;0.003];
-duration = [1;20;50];
-env = adsr(target,gain,duration,fs,t(end));
+
+## target = [0.999;0.05;0.00];
+## gain = [0.05;0.006;0.003];
+## duration = [1;20;50];
+#env = adsr(target,gain,duration,fs,t(end));
+
+## clear all;
+## source("envelopes.m");
+## fs = 48000;
+len_sig = 8487;
+a_ = 0.0005;
+r_ = (len_sig - (a_*fs))/fs;
+g_ = horzcat(ones(1, a_*fs), zeros(1, r_*fs));
+for i = 1:length(g_)
+  envARE(i) = are(a_,r_,g_(i));
+endfor
+plot(envARE);
+
+
 
 #figure;
 #set(gcf, 'Position', get(0, 'Screensize'));
 subplot(3,3,4);
-plot(t.*1000,env);
+plot(t.*1000,envARE);
 axis([0 80 -1 1]);
 grid minor on;
 title("ADSR time-series plot");
@@ -312,7 +329,7 @@ legend("S3mppidBN","S3dBN","S3ifdBN");
 rand("seed",1);
 x = (rand(round(fs*t(end)),1) - 0.5).*2;
 # xlp = lpf(5,0.9,x);
-y =  env .* x; % Modulate
+y =  envARE' .* x; % Modulate
 
 ## shape the FR of the noise burst using the LPF designed using invfreqz,ie [B3if,A3if]
 ## res3synth = lpf(2,0.9,y);
